@@ -3,7 +3,8 @@ package pl.nowekolory.REST.movie;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -12,29 +13,29 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@AllArgsConstructor
 public class MovieService {
-    @Autowired
     private MovieRepository movieRepository;
-    private final String BASE_URL = "https://www.omdbapi.com/?apikey=26eac013";
+    private final Environment environment;
     public Movie getMoviesByIdOrTitle(String id, String title) {
         RestTemplate restTemplate = new RestTemplate();
-        String url = this.BASE_URL;
+        String condition = "";
 
         if (id != null) {
-            url = url + "&i=" + id;
+            condition = condition + "&i=" + id;
         }
 
         if (title != null) {
-            url = url + "&t=" + title;
+            condition = condition + "&t=" + title;
         }
 
-        ResponseEntity<Movie> responseEntity = restTemplate.getForEntity(url, Movie.class);
+        ResponseEntity<Movie> responseEntity = restTemplate.getForEntity(this.environment.getProperty("rest.api.endpoint") + condition, Movie.class);
         return responseEntity.getBody();
     }
 
-    public JsonNode getMoviesBySearch(String search) throws JsonProcessingException {
+    public JsonNode getMoviesBySearch(String keyword) throws JsonProcessingException {
         RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> responseEntity = restTemplate.getForEntity(this.BASE_URL + "&s=" + search, String.class);
+        ResponseEntity<String> responseEntity = restTemplate.getForEntity(this.environment.getProperty("rest.api.endpoint") + "&s=" + keyword, String.class);
         ObjectMapper objectMapper = new ObjectMapper();
         return objectMapper.readTree(responseEntity.getBody()).get("Search");
     }

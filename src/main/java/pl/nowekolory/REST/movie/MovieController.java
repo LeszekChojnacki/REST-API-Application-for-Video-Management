@@ -21,8 +21,8 @@ public class MovieController {
     }
 
     @GetMapping("/search")
-    public JsonNode getMoviesBySearch(@RequestParam(required = false, value = "search") String search) throws JsonProcessingException {
-        return this.movieService.getMoviesBySearch(search);
+    public JsonNode getMoviesBySearch(@RequestParam(required = false, value = "keyword") String keyword) throws JsonProcessingException {
+        return this.movieService.getMoviesBySearch(keyword);
     }
 
     @PostMapping("/favorite")
