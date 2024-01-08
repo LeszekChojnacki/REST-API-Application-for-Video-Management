@@ -1,7 +1,5 @@
 package pl.nowekolory.REST.movie;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +19,7 @@ public class MovieController {
     }
 
     @GetMapping("/search")
-    public JsonNode getMoviesBySearch(@RequestParam(required = false, value = "keyword") String keyword) throws JsonProcessingException {
+    public List<Movie> getMoviesBySearch(@RequestParam(required = false, value = "keyword") String keyword) {
         return this.movieService.getMoviesBySearch(keyword);
     }
 

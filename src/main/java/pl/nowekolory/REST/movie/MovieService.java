@@ -1,13 +1,14 @@
 package pl.nowekolory.REST.movie;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
-import org.springframework.core.env.Environment;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import pl.nowekolory.REST.exception.ResponseBodyFormatException;
+import pl.nowekolory.REST.exception.ResponseNullException;
+import pl.nowekolory.REST.integration.OmdbIntegration;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,35 +17,35 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class MovieService {
     private MovieRepository movieRepository;
-    private final Environment environment;
+    private OmdbIntegration omdbIntegration;
     public Movie getMoviesByIdOrTitle(String id, String title) {
-        RestTemplate restTemplate = new RestTemplate();
-        String condition = "";
-
-        if (id != null) {
-            condition = condition + "&i=" + id;
+        String response = this.omdbIntegration.searchByIdOrTitle(id, title);
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            JsonNode searchNode = objectMapper.readTree(response);
+        return objectMapper.convertValue(searchNode, new TypeReference<Movie>(){});
+        } catch (JsonProcessingException e) {
+            throw new ResponseBodyFormatException(String.format("REST Response body JSON format not compatible: %s", response));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseNullException(String.format("REST Response NULL: %s", response));
         }
-
-        if (title != null) {
-            condition = condition + "&t=" + title;
-        }
-
-        ResponseEntity<Movie> responseEntity = restTemplate.getForEntity(this.environment.getProperty("rest.api.endpoint") + condition, Movie.class);
-        return responseEntity.getBody();
     }
 
-    public JsonNode getMoviesBySearch(String keyword) throws JsonProcessingException {
-        RestTemplate restTemplate = new RestTemplate();
-        ResponseEntity<String> responseEntity = restTemplate.getForEntity(this.environment.getProperty("rest.api.endpoint") + "&s=" + keyword, String.class);
+    public List<Movie> getMoviesBySearch(String keyword) {
+        String response = this.omdbIntegration.searchByKeyword(keyword);
         ObjectMapper objectMapper = new ObjectMapper();
-        return objectMapper.readTree(responseEntity.getBody()).get("Search");
+        try {
+            JsonNode searchNode = objectMapper.readTree(response).get("Search");
+            return objectMapper.convertValue(searchNode, new TypeReference<List<Movie>>(){});
+        } catch (JsonProcessingException e) {
+            throw new ResponseBodyFormatException(String.format("REST Response body JSON format not compatible: %s", response));
+        } catch (IllegalArgumentException e) {
+            throw new ResponseNullException(String.format("REST Response NULL: %s", response));
+        }
     }
 
     public List<Movie> getFavoriteMovies() {
         List<Favorite> favorites = this.movieRepository.findAll();
-        if (favorites.isEmpty()) {
-            return null;
-        }
         return favorites.stream().map(favorite -> this.getMoviesByIdOrTitle(favorite.getImdbID(), null)).collect(Collectors.toList());
     }
 
